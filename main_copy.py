@@ -205,22 +205,16 @@ def serial_comm(port, baudrate):
             start_time = time.time()
             color_list = color_gen()
             list_size = len(color_list)
-            color_list1 = str(color_list[0:17]) + '\n'
-            color_list2 = str(color_list[18:35]) + '\n'
-            color_list3 = str(color_list[36:53]) + '\n'
-            color_list4 = str(color_list[54:71]) + '\n'
+            color_list1 = str(color_list[0:18]) + '\n'
             # message = json.dumps(color_gen()).strip(' ') + '\n'
             # message = str(color_gen()).replace(' ', '') + '\n'
 
             # Send the command to the ESP32
             ser.write(color_list1.encode('utf-8'))
-            # time.sleep(1)
-            # ser.write(color_list2.encode('utf-8'))
-            # ser.write(color_list3.encode('utf-8'))
-            # ser.write(color_list4.encode('utf-8'))
+
             # Wait for a response
-            response = ser.readline().strip()
-            print("Response from ESP32:", response)
+            # response = ser.readline().strip()
+            # print("Response from ESP32:", response)
 
             end_time = time.time()
             print(f'Time elapsed: {end_time - start_time}')
@@ -246,7 +240,7 @@ if __name__ == "__main__":
     ESP32_name = 'CH340'
     # ESP32_baudrate = 115400
     # ESP32_baudrate = 230400
-    # ESP32_baudrate = 460800
-    ESP32_baudrate = 921600
+    ESP32_baudrate = 460800
+    # ESP32_baudrate = 921600
     ESP32_port = find_port(ESP32_name)
     serial_comm(ESP32_port, ESP32_baudrate)
