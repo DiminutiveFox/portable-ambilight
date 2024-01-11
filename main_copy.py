@@ -44,6 +44,7 @@ def dominant_color(screenshot, k=1):
 
     return list(dominant_color)
 
+
 def take_picture(box=(0, 0, 2560, 1440)):
     """ Takes screenshot """
     # bbox = (100, 100, 500, 500)
@@ -51,6 +52,7 @@ def take_picture(box=(0, 0, 2560, 1440)):
     # cv2.imshow('Img', screenshot)
     # cv2.waitKey()
     return screenshot
+
 
 def color_gen2(h_LEDs=18, w_LEDs=36):
     """ Returns color spectrum of a display's frame """
@@ -111,6 +113,7 @@ def color_gen2(h_LEDs=18, w_LEDs=36):
     # Returning the extracted colors
     return l_colors + u_colors + r_colors
     # return l_average_img_color + u_average_img_color + r_average_img_color
+
 
 def color_gen(h_LEDs=18, w_LEDs=36, h=1440, w=2560):
     """ Returns color spectrum of a display's frame """
@@ -205,13 +208,21 @@ def serial_comm(port, baudrate):
             start_time = time.time()
             color_list = color_gen()
             list_size = len(color_list)
-            color_list1 = str(color_list[0:18]) + '\n'
+            color_list1 = str(color_list[0:17]) + '\n'
+            color_list2 = str(color_list[18:35]) + '\n'
+            color_list3 = str(color_list[36:53]) + '\n'
+            color_list4 = str(color_list[54:71]) + '\n'
             # message = json.dumps(color_gen()).strip(' ') + '\n'
             # message = str(color_gen()).replace(' ', '') + '\n'
 
             # Send the command to the ESP32
             ser.write(color_list1.encode('utf-8'))
-
+            time.sleep(0.001)
+            ser.write(color_list2.encode('utf-8'))
+            time.sleep(0.001)
+            ser.write(color_list3.encode('utf-8'))
+            time.sleep(0.001)
+            ser.write(color_list4.encode('utf-8'))
             # Wait for a response
             # response = ser.readline().strip()
             # print("Response from ESP32:", response)

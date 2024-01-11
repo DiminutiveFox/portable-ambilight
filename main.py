@@ -44,6 +44,7 @@ def dominant_color(screenshot, k=1):
 
     return list(dominant_color)
 
+
 def take_picture(box=(0, 0, 2560, 1440)):
     """ Takes screenshot """
     # bbox = (100, 100, 500, 500)
@@ -51,6 +52,7 @@ def take_picture(box=(0, 0, 2560, 1440)):
     # cv2.imshow('Img', screenshot)
     # cv2.waitKey()
     return screenshot
+
 
 def color_gen2(h_LEDs=18, w_LEDs=36):
     """ Returns color spectrum of a display's frame """
@@ -111,6 +113,7 @@ def color_gen2(h_LEDs=18, w_LEDs=36):
     # Returning the extracted colors
     return l_colors + u_colors + r_colors
     # return l_average_img_color + u_average_img_color + r_average_img_color
+
 
 def color_gen(h_LEDs=18, w_LEDs=36, h=1440, w=2560):
     """ Returns color spectrum of a display's frame """
@@ -176,8 +179,72 @@ def color_gen(h_LEDs=18, w_LEDs=36, h=1440, w=2560):
     # Returning the extracted colors
     print(time.time()-s_time)
     # print(l_colors + u_colors + r_colors)
+    # return l_colors + u_colors + r_colors
+    return l_average_img_color + u_average_img_color + r_average_img_color
+
+
+def color_gen3(h_LEDs=18, w_LEDs=36, h=1440, w=2560):
+    """ Returns color spectrum of a display's frame """
+    s_time = time.time()
+
+    h_divider = 8
+    w_divider = 16
+
+    # Defining bounding boxes
+    u_box = {"top": 0, "left": 0, "width": w, "height": int(h / h_divider)}
+    l_box = {"top": int(h / h_divider), "left": 0, "width": int(w / w_divider), "height": int(h - h / h_divider)}
+    r_box = {"top": int(h / h_divider), "left": int(w - w / w_divider), "width": int(w / w_divider), "height": int(h - h / h_divider)}
+
+    # Taking screenshot of the frame - frame is composed of 3 screenshots (2 side and 1 upper fields)
+    with mss.mss() as camera:
+        u_screenshot = np.array(camera.grab(u_box))
+        l_screenshot = np.array(camera.grab(l_box))
+        r_screenshot = np.array(camera.grab(r_box))
+        u_screenshot = cv2.resize(u_screenshot, dsize=(int(w/4), int(h/h_divider/4)), interpolation=cv2.INTER_CUBIC)
+        l_screenshot = cv2.resize(l_screenshot, dsize=(int(h/4), int(w/w_divider/4)), interpolation=cv2.INTER_CUBIC)
+        r_screenshot = cv2.resize(r_screenshot, dsize=(int(h/4), int(w/w_divider/4)), interpolation=cv2.INTER_CUBIC)
+
+    print(time.time() - s_time)
+
+    h_r, w_r, c_r = r_screenshot.shape
+    h_l, w_l, c_l = l_screenshot.shape
+    h_u, w_u, c_u = u_screenshot.shape
+
+    # Dividing screenshots to 16 smaller ones and extracting average color of them
+    l_image_list = [l_screenshot[int(n * h_l / h_LEDs):int(n * h_l / h_LEDs + h_l / h_LEDs), :]
+                    for n in range(h_LEDs-1, -1, -1)]
+    l_average_img_color = [np.average(l_image_list[n], axis=(1, 0)) for n in range(h_LEDs)]
+    l_average_img_color = [[str(int(channels[2])), str(int(channels[1])), str(int(channels[0]))]
+                           for channels in l_average_img_color]
+    l_colors = color_string(l_average_img_color)
+
+    u_image_list = [u_screenshot[:, int(n * w_u / w_LEDs):int(n * w_u / w_LEDs + w_u / w_LEDs)] for n in range(w_LEDs)]
+    u_average_img_color = [np.average(u_image_list[n], axis=(1, 0)) for n in range(w_LEDs)]
+    u_average_img_color = [[str(int(channels[2])), str(int(channels[1])), str(int(channels[0]))]
+                           for channels in u_average_img_color]
+    u_colors = color_string(u_average_img_color)
+
+    r_image_list = [r_screenshot[int(n * h_r / h_LEDs):int(n * h_r / h_LEDs + h_r / h_LEDs), :] for n in range(h_LEDs)]
+    r_average_img_color = [np.average(r_image_list[n], axis=(1, 0)) for n in range(h_LEDs)]
+    r_average_img_color = [[str(int(channels[2])), str(int(channels[1])), str(int(channels[0]))]
+                           for channels in r_average_img_color]
+    r_colors = color_string(r_average_img_color)
+
+    # Returning the extracted colors
+    print(time.time()-s_time)
     return l_colors + u_colors + r_colors
-    # return l_average_img_color + u_average_img_color + r_average_img_color
+
+def color_string(color_list):
+
+    for color in color_list:
+        while len(color[0]) < 3:
+            color[0] = '0' + color[1]
+        while len(color[1]) < 3:
+            color[1] = '0' + color[1]
+        while len(color[2]) < 3:
+            color[2] = '0' + color[2]
+
+    return ''.join([''.join(sublist) for sublist in color_list])
 
 
 def get_dominant_color(screenshot):
@@ -196,27 +263,32 @@ def serial_comm(port, baudrate):
     ser.setDTR(False)
     ser.setRTS(False)
     ser.port = port
-    ser.timeout = 0.1
+    ser.timeout = 0.001
     ser.baudrate = baudrate
     ser.open()
 
     try:
+        # ser.write("START\n".encode('utf-8'))
         while True:
             start_time = time.time()
-            color_list = color_gen()
-            list_size = len(color_list)
-            color_list1 = str(color_list[0:17]) + '\n'
-            color_list2 = str(color_list[18:35]) + '\n'
-            color_list3 = str(color_list[36:53]) + '\n'
-            color_list4 = str(color_list[54:71]) + '\n'
+            # color_list = color_gen()
+            # list_size = len(color_list)
+            # color_list1 = str(color_list[0:20]) + '\n'
+            # color_list2 = str(color_list[18:35]) + '\n'
+            # color_list3 = str(color_list[36:53]) + '\n'
+            # color_list4 = str(color_list[54:71]) + '\n'
             # message = json.dumps(color_gen()).strip(' ') + '\n'
             # message = str(color_gen()).replace(' ', '') + '\n'
-
+            message = color_gen3()
             # Send the command to the ESP32
-            ser.write(color_list1.encode('utf-8'))
-            # time.sleep(1)
+            print(message)
+            ser.write(message.encode('utf-8'))
+            ser.flush()
+            time.sleep(0.001)
             # ser.write(color_list2.encode('utf-8'))
+            # time.sleep(0.001)
             # ser.write(color_list3.encode('utf-8'))
+            # time.sleep(0.001)
             # ser.write(color_list4.encode('utf-8'))
             # Wait for a response
             response = ser.readline().strip()
@@ -241,12 +313,23 @@ def find_port(device_name):
     return None
 
 
-if __name__ == "__main__":
+def strip_characters(input_string, characters_to_remove):
+    # Create a translation table
+    translation_table = str.maketrans("", "", characters_to_remove)
 
+    # Use translate to remove specified characters
+    stripped_string = input_string.translate(translation_table)
+
+    return stripped_string
+
+if __name__ == "__main__":
     ESP32_name = 'CH340'
     # ESP32_baudrate = 115400
     # ESP32_baudrate = 230400
-    # ESP32_baudrate = 460800
-    ESP32_baudrate = 921600
+    ESP32_baudrate = 460800
+    # ESP32_baudrate = 921600
     ESP32_port = find_port(ESP32_name)
     serial_comm(ESP32_port, ESP32_baudrate)
+    color_list = color_gen3()
+    print(color_list)
+    print(len(color_list))
