@@ -100,15 +100,13 @@ def serial_comm(baudrate=115400):
             data = read_serial()
             if data is not None:
                 data = data.decode('utf-8').strip('\n')
-                print(data)
                 config = list(data[:2])
                 color_string = data[2:]
                 if config_mem != config:
-                    # reset_np()
-                    print('reset')
+                    reset_np()
                 else:
                     create_ambience2(color_string, bool(config[0]), int(config[1]))
-                # print(data)
+                print(data)
                 config_mem = config
         except Exception as err:
             print(err)
