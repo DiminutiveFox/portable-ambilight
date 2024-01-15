@@ -103,7 +103,11 @@ def read_serial():
 
 
 def serial_comm(baudrate=115200):
+    """
 
+    :param baudrate:
+    :return:
+    """
     #Changing baudrate
     if baudrate != 115200:
         machine.UART(0, baudrate=baudrate)

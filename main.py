@@ -9,8 +9,8 @@ import mss
 def dominant_color(screenshot, k=1):
     """
     Returns dominant color of the screenshot
-    :param screenshot: Picture represented as NumPy array
-    :param k:
+    :param screenshot:      Picture represented as NumPy array
+    :param k:               parameter k
     :return:
     """
     # Reshape the image to a list of pixels
@@ -45,7 +45,7 @@ def dominant_color(screenshot, k=1):
 def average_color(image):
     """
     Returns average color of the image
-    :param image: NumPy array
+    :param image:           NumPy array
     :return:
     """
     return np.average(image, axis=(1, 0))
@@ -54,10 +54,10 @@ def average_color(image):
 def color_extraction(image_list, color_func, scale, led_number):
     """
     Returns string of extracted RGB colors from given list of screenshots
-    :param color_func: function that finds preferable color on the screenshot e.g. average color
-    :param image_list: list of screenshots
-    :param scale: parameter that specifies if color scale is reduced from 0-255 to 0-99
-    :param led_number: number of leds for given list of screenshots
+    :param color_func:      function that finds preferable color on the screenshot e.g. average color
+    :param image_list:      list of screenshots
+    :param scale:           parameter that specifies if color scale is reduced from 0-255 to 0-99
+    :param led_number:      number of leds for given list of screenshots
     :return:
     """
     color_list = [color_func(image_list[n]) for n in range(led_number)]
@@ -73,7 +73,7 @@ def color_extraction(image_list, color_func, scale, led_number):
 def scale_channel(channel_value):
     """
     Scales down channel value from range 0-255 to 0-99
-    :param channel_value: color channel
+    :param      channel_value: color channel
     :return:
     """
     channel_max_value = 255
@@ -89,8 +89,8 @@ def color_string(color_list, scale):
     """
     Returns color string completed with redundant zeros.
     As a result output string for esp32 has the same length every time.
-    :param color_list: list of colors extracted in previous steps
-    :param scale: parameter that specifies if color scale is reduced from 0-255 to 0-99
+    :param color_list:  list of colors extracted in previous steps
+    :param scale:       parameter that specifies if color scale is reduced from 0-255 to 0-99
     :return:
     """
 
@@ -110,12 +110,12 @@ def color_string(color_list, scale):
 def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560):
     """
     Returns color spectrum of a display's frame
-    :param scale:
-    :param led_span:
-    :param h_leds:
-    :param w_leds:
-    :param h:
-    :param w:
+    :param scale:       parameter that specifies if color scale is reduced from 0-255 to 0-99
+    :param led_span:    reduces the number of active WS2812B LEDS (1, 2, 3)
+    :param h_leds:      number of leds on side frame
+    :param w_leds:      number of leds on upper frame
+    :param h:           number of rows of pixels for screen resolution
+    :param w:           number of columns of pixels for screen resolution
     :return:
     """
 
@@ -162,25 +162,16 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560):
     r_image_list = [r_screenshot[int(n * h_r / h_leds):int(n * h_r / h_leds + h_r / h_leds), :] for n in range(h_leds)]
     r_colors = color_extraction(r_image_list, average_color, scale, h_leds)
 
-
-
-
     # Returning the extracted colors
     print(f"Time of color extraction: {time.time() - s_time}")
     return l_colors + u_colors + r_colors
 
 
-def get_dominant_color(screenshot):
-
-    unique, counts = np.unique(screenshot.reshape(-1, 3), axis=0, return_counts=True)
-    return list(unique[np.argmax(counts)])
-
-
 def serial_comm(port, baudrate):
     """
     Exchanges data between device via serial port
-    :param port: USB port where ESP32 is plugged in
-    :param baudrate: UART communication throughput parameter
+    :param port:            USB port where ESP32 is plugged in
+    :param baudrate:        UART communication throughput parameter
     :return:
     """
 
@@ -210,7 +201,10 @@ def serial_comm(port, baudrate):
             # Wait for response (for debugging mostly - it slows down the whole process)
             # response = ser.readline().strip()
             # print("Response from ESP32:", response)
+
+            # Needed for stable communication
             time.sleep(0.01) if led_span == 1 else None
+
             # Print time
             end_time = time.time()
             print(f'Time elapsed: {end_time - start_time}')
@@ -220,7 +214,11 @@ def serial_comm(port, baudrate):
 
 
 def find_port(device_name):
-    """ Finds port of specified device """
+    """
+    Finds port of specified device
+    :param device_name:     Device's name (can be found in device manager)
+    :return:
+    """
 
     ports = list(serial.tools.list_ports.comports())
 
