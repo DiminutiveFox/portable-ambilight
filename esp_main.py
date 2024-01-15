@@ -8,15 +8,17 @@ import time
 
 
 # Configure the Neopixel
-NUM_PIXELS = 72
+NUM_PIXELS = 69
+
 # Total number of LEDs
 NEO_PIN = 5  # GPIO for neopixel data
 
+# NeoPixel configuration
 np = neopixel.NeoPixel(Pin(NEO_PIN), NUM_PIXELS)
+
+# Serial port configuration - only way to communicate throught USB
 serialPoll = uselect.poll()
 serialPoll.register(sys.stdin, uselect.POLLIN)
-LED = Pin(6, Pin.OUT)
-
 
 def convert_to_list(color_string):
     """Converts received string of colors to list"""
@@ -57,36 +59,50 @@ def create_ambience2(color_string, scale=True, led_span=1):
 
 
 def scale_channel(channel_value):
+    """
+    Scales channel value back to original values (not accurately)
+    :param channel_value: channel value in scale 0-99
+    :return:
+    """
+
     channel_max_value = 99
     channel_scaled_max_value = 255
 
     return int(channel_value*channel_scaled_max_value/channel_max_value)
 
+
 def reset_np():
+    """
+    Resets all pixel values back to [0, 0, 0]
+    :return:
+    """
 
     for i in range(NUM_PIXELS):
         np[i] = [0, 0, 0]
     np.write()
 
+
 def create_ambience(message):
-    """Activates WS2812B strip according to the message"""
+    """
+    Activates WS2812B strip according to the message
+    :param message:
+    :return:
+    """
     for color in message:
         np[color[0]] = color[1]
     np.write()
 
 
-
 def read_serial():
-    """Reads a message"""
-    # return sys.stdin.buffer.readline()
-    return sys.stdin.buffer.readline(652) if serialPoll.poll(10) else None
-    # return sys.stdin.read(648) if serialPoll.poll(0) else None
-    # if serialPoll.poll(0):
-    #     data = ""
-    #     while sys.read
+    """
+    Reads a message - 652 is the longest
+    :return:
+    """
+
+    return sys.stdin.buffer.readline(5216) if serialPoll.poll(10) else None
 
 
-def serial_comm(baudrate=115400):
+def serial_comm(baudrate=115200):
 
     #Changing baudrate
     if baudrate != 115200:
@@ -104,8 +120,8 @@ def serial_comm(baudrate=115400):
                 config = list(data[:2])
                 color_string = data[2:]
                 if config_mem != config:
-                    # reset_np()
-                    print('reset')
+                    reset_np()
+                    # print('reset')
                 else:
                     create_ambience2(color_string, bool(config[0]), int(config[1]))
                 # print(data)
@@ -119,6 +135,6 @@ def main():
 
     print("Entering main...")
     time.sleep(0.5)
-    # esp32_baudrate = 230400
+    esp32_baudrate = 230400
     # esp32_baudrate = 460800
     serial_comm()

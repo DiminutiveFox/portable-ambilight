@@ -1,10 +1,8 @@
 import cv2
 import serial.tools.list_ports
-from PIL import ImageGrab
 import numpy as np
 import serial
 import time
-from sklearn.cluster import KMeans
 from collections import Counter
 import mss
 
@@ -37,15 +35,6 @@ def dominant_color(screenshot, k=1):
         dominant_color = centers[dominant_label]
 
     return list(dominant_color)
-
-
-def take_picture(box=(0, 0, 2560, 1440)):
-    """ Takes screenshot """
-    # bbox = (100, 100, 500, 500)
-    screenshot = cv2.cvtColor(np.array(ImageGrab.grab(box)), cv2.COLOR_BGR2RGB)
-    # cv2.imshow('Img', screenshot)
-    # cv2.waitKey()
-    return screenshot
 
 
 def average_color(image):
@@ -194,8 +183,9 @@ def serial_comm(port, baudrate):
     ser.port = port
     ser.baudrate = baudrate
     ser.open()
+    # ser.timeout = 0.001
     scale = 1
-    led_span = 1
+    led_span = 2
 
     try:
         while True:
@@ -210,7 +200,7 @@ def serial_comm(port, baudrate):
             # Wait for response (for debugging mostly - it slows down the whole process)
             # response = ser.readline().strip()
             # print("Response from ESP32:", response)
-            time.sleep(0.01)
+            time.sleep(0.01) if led_span == 1 else None
             # Print time
             end_time = time.time()
             print(f'Time elapsed: {end_time - start_time}')
@@ -233,6 +223,7 @@ if __name__ == "__main__":
 
     # Specify the name of the esp module that appears in device manager and baudrate
     ESP32_name = 'CH340'
+    # ESP32_name = 'CP210'
     ESP32_baudrate = 115200
     # ESP32_baudrate = 230400
     # ESP32_baudrate = 460800
