@@ -7,7 +7,12 @@ from collections import Counter
 import mss
 
 def dominant_color(screenshot, k=1):
-
+    """
+    Returns dominant color of the screenshot
+    :param screenshot: Picture represented as NumPy array
+    :param k:
+    :return:
+    """
     # Reshape the image to a list of pixels
     pixels = screenshot.reshape((-1, 3))
 
@@ -150,7 +155,7 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560):
     # Dividing screenshots into smaller ones and extracting average color of them
     l_image_list = [l_screenshot[int(n*h_l/h_leds):int(n*h_l/h_leds+h_l/h_leds):] for n in range(h_leds - 1, -1, -1)]
     l_colors = color_extraction(l_image_list, average_color, scale, h_leds)
-    print(len(l_colors))
+
     u_image_list = [u_screenshot[:, int(n * w_u / w_leds):int(n * w_u / w_leds + w_u / w_leds)] for n in range(w_leds)]
     u_colors = color_extraction(u_image_list, average_color, scale, w_leds)
 
@@ -172,7 +177,12 @@ def get_dominant_color(screenshot):
 
 
 def serial_comm(port, baudrate):
-    """ Exchanges data between device via serial port """
+    """
+    Exchanges data between device via serial port
+    :param port: USB port where ESP32 is plugged in
+    :param baudrate: UART communication throughput parameter
+    :return:
+    """
 
     # Configure the serial port
     ser = serial.Serial()
@@ -224,6 +234,8 @@ if __name__ == "__main__":
     # Specify the name of the esp module that appears in device manager and baudrate
     ESP32_name = 'CH340'
     # ESP32_name = 'CP210'
+
+    # Specify the baudrate for UART communication - 115200 most stable
     ESP32_baudrate = 115200
     # ESP32_baudrate = 230400
     # ESP32_baudrate = 460800
