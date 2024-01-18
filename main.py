@@ -167,6 +167,8 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560):
     return l_colors + u_colors + r_colors
 
 
+
+
 def serial_comm(port, baudrate):
     """
     Exchanges data between device via serial port

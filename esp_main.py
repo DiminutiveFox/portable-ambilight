@@ -8,7 +8,7 @@ import time
 
 
 # Configure the Neopixel
-NUM_PIXELS = 69
+NUM_PIXELS = 72
 
 # Total number of LEDs
 NEO_PIN = 5  # GPIO for neopixel data
