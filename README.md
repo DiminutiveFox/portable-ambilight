@@ -6,10 +6,8 @@ It is meant for laptops' screens and has a few interesting traits:
 - is customizable
 - easy to use
 
-https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/e31a8899-3bb5-47f5-a258-803ae1b41607
 
-
-https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/d83accbb-676f-4a38-bcca-d819bff8139e
+https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/26f663a3-f494-433e-aea4-3c4ae5942c87
 
 
 
