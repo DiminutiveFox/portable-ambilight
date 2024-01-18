@@ -9,6 +9,10 @@ It is meant for laptops' screens and has a few interesting traits:
 https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/e31a8899-3bb5-47f5-a258-803ae1b41607
 
 
+https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/d83accbb-676f-4a38-bcca-d819bff8139e
+
+
+
 # Project description
 Project's code is entirely written in python. It has 3 files - 2 of them are meant for ESP32-C3 (boot.py and esp_main.py). To be able to run python code on this module you first need to install micropython on it. There are several tutorials all over the internet that show the process and also how to flash the board. Need to know that different ESP development boards can be used, but installation of micropython might vary for every module. Micropython might not be the right choice for this kind of project but I wanted to show that this task is doable using it. 
 
