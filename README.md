@@ -9,6 +9,9 @@ It is meant for laptops' screens and has a few interesting traits:
 
 https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/26f663a3-f494-433e-aea4-3c4ae5942c87
 
+https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/4b8f592b-657a-4010-a35d-80faadaac9aa
+
+
 
 
 # Project description
