@@ -6,9 +6,7 @@ It is meant for laptops' screens and has a few interesting traits:
 - is customizable
 - easy to use
 
-
 ![Ambilight](https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/57772cf3-2aa2-4531-8323-f84526c7870e)
-
 
 # Project description
 Project's code is entirely written in python. It has 3 files - 2 of them are meant for ESP32-C3 (boot.py and esp_main.py). To be able to run python code on this module you first need to install micropython on it. There are several tutorials all over the internet that show the process and also how to flash the board. Need to know that different ESP development boards can be used, but installation of micropython might vary depending on the module. Micropython might not be the right choice for this kind of project but I wanted to show that this task is doable using it. 
@@ -31,4 +29,8 @@ This is the main file for ESP. The most important aspect is that we want to comm
 
 # main.py
 The heart of the project - it's functionality was mostly described above. 
+
+
+# 3d parts and assembly 
+LED strip (if you are using standard monitor) can be attached directly to the back of your screen. But if you are using laptop (like me) you might want to use your ambilight only when you are home and remove it when travelling. So that is why I made a 3d printed frame that can be attached to the back using suction cups. All parts (apart of suction cups) are provided in the project. Mind that ESP case might not be suitable for your dev board. This design might not be the best (in my humble opinion it is even ugly and there is a lot of space for improvement) but it provides all functionality that is needed. 
 
