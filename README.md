@@ -25,7 +25,7 @@ The heart of the project - it's functionality was mostly described above. User n
 ![image](https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/b6f4b704-4ae1-4cd0-82ae-64268fd5fd8b)
 
 # boot.py
-This is the file which is executed when ESP boots. It has standard structure and executes main.py which contains all important functions. Read the comments to configure the esp startup. Starting main loop from REPL is though recommended. Remember when esp_main.main() is started directly in boot.py file the REPL is lost and all files need to be erased (for example using esptool) to be able to flash ESP again. 
+This is the file which is executed when ESP boots. It has standard structure and executes main.py which contains all important functions. Read the comments to configure the esp startup. Starting main loop from REPL is though recommended. Remember when esp_main.main() is started directly in boot.py file the REPL is lost and all files need to be erased (for example using esptool) to be able to flash ESP again.
 
 # esp_main.py
 This is the main file for ESP. The most important aspect is that we want to communicate with system over USB-TTL bridge already mounted on board. It cannot be done easily since this bridge is connected to the UART0 which is reserved for REPL. Instead of UART communication sys.stdin is used for message reading on the ESP side. Default baudrate for REPL is 115200. It can be increased but communication becames unpredictable in higher rates - sometimes message is not read entirely or new message is inserted in the middle of the previous one. ESP behavior highly depends on the module. Check manufacturer's docs before buying one (and avoid my rookie mistake). Specify number of LEDs and GPIO for NeoPixel object. For debugging purpose you can uncomment part of code which sends the message back to the PC (also you need to do this in main.py file) 
@@ -43,8 +43,7 @@ LED strip (if you are using standard monitor) can be attached directly to the ba
 - glue everything together
 - put suction cups into the holes
 - cut and solder LED strip accordingly to the picture below
-- install micropython on your dev board
-- download code for ESP, specify parameters of your setup and flash the board
+- setup your ESP (useful commands can be found in HandyEsptoolCommands file) and run esp_main.main()
 - specify parameters of your setup in main.py file and run it
 - put it on the back on your laptop
 - enjoy!
