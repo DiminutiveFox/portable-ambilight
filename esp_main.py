@@ -7,18 +7,19 @@ import json
 import time
 
 
-# Configure the Neopixel
+# Total number of LEDs
 NUM_PIXELS = 72
 
-# Total number of LEDs
+# Configure the Neopixel
 NEO_PIN = 5  # GPIO for neopixel data
 
 # NeoPixel configuration
 np = neopixel.NeoPixel(Pin(NEO_PIN), NUM_PIXELS)
 
-# Serial port configuration - only way to communicate throught USB
+# Serial port configuration - only way to communicate thought USB
 serialPoll = uselect.poll()
 serialPoll.register(sys.stdin, uselect.POLLIN)
+
 
 def convert_to_list(color_string):
     """Converts received string of colors to list"""
@@ -31,7 +32,7 @@ def handle_command(command):
         sys.stdout.buffer.write(command)
 
 
-def create_ambience2(color_string, scale=True, led_span=1):
+def create_ambience(color_string, scale=True, led_span=1):
     """
     Converts message to list of colors and writes it to NeoPixel instance \n \n
     Arguments: \n
@@ -82,21 +83,10 @@ def reset_np():
     np.write()
 
 
-def create_ambience(message):
-    """
-    Activates WS2812B strip according to the message
-    :param message:
-    :return:
-    """
-    for color in message:
-        np[color[0]] = color[1]
-    np.write()
-
-
 def read_serial():
     """
-    Reads a message - 652 is the longest
-    :return:
+    Reads a message - 5216 is the longest
+    :return: message (in bytes)
     """
 
     return sys.stdin.buffer.readline(5216) if serialPoll.poll(10) else None
@@ -127,7 +117,7 @@ def serial_comm(baudrate=115200):
                     reset_np()
                     # print('reset')
                 else:
-                    create_ambience2(color_string, bool(config[0]), int(config[1]))
+                    create_ambience(color_string, bool(config[0]), int(config[1]))
                 # print(data)
                 config_mem = config
         except Exception as err:
@@ -139,6 +129,6 @@ def main():
 
     print("Entering main...")
     time.sleep(0.5)
-    esp32_baudrate = 230400
+    # esp32_baudrate = 230400
     # esp32_baudrate = 460800
     serial_comm()

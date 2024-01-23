@@ -11,7 +11,7 @@ def dominant_color(screenshot, k=1):
     Returns dominant color of the screenshot
     :param screenshot:      Picture represented as NumPy array
     :param k:               parameter k
-    :return:
+    :return:                Dominant color of a specified field
     """
     # Reshape the image to a list of pixels
     pixels = screenshot.reshape((-1, 3))
@@ -46,7 +46,7 @@ def average_color(image):
     """
     Returns average color of the image
     :param image:           NumPy array
-    :return:
+    :return:                Average pixel value of a specified field
     """
     return np.average(image, axis=(1, 0))
 
@@ -58,7 +58,7 @@ def color_extraction(image_list, color_func, scale, led_number):
     :param image_list:      list of screenshots
     :param scale:           parameter that specifies if color scale is reduced from 0-255 to 0-99
     :param led_number:      number of leds for given list of screenshots
-    :return:
+    :return:                Color string
     """
     color_list = [color_func(image_list[n]) for n in range(led_number)]
     if scale:
@@ -74,7 +74,7 @@ def scale_channel(channel_value):
     """
     Scales down channel value from range 0-255 to 0-99
     :param      channel_value: color channel
-    :return:
+    :return:    Scaled channel value
     """
     channel_max_value = 255
     channel_scaled_max_value = 99
@@ -91,7 +91,7 @@ def color_string(color_list, scale):
     As a result output string for esp32 has the same length every time.
     :param color_list:  list of colors extracted in previous steps
     :param scale:       parameter that specifies if color scale is reduced from 0-255 to 0-99
-    :return:
+    :return:            Color string
     """
 
     channel_length = 2 if scale else 3
@@ -116,7 +116,7 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560):
     :param w_leds:      number of leds on upper frame
     :param h:           number of rows of pixels for screen resolution
     :param w:           number of columns of pixels for screen resolution
-    :return:
+    :return:            Color string
     """
 
     # For performance measurement purpose
@@ -167,14 +167,18 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560):
     return l_colors + u_colors + r_colors
 
 
-
-
-def serial_comm(port, baudrate):
+def serial_comm(port, baudrate, scale=1, led_span=2, h_leds=18, w_leds=36, h=1440, w=2560):
     """
     Exchanges data between device via serial port
-    :param port:            USB port where ESP32 is plugged in
-    :param baudrate:        UART communication throughput parameter
-    :return:
+    :param port:        ESP port
+    :param baudrate:    ESP communication baudrate (115200 default - other might be unstable)
+    :param scale:       parameter that specifies if color scale is reduced from 0-255 to 0-99
+    :param              led_span: reduces the number of active WS2812B LEDS (1, 2, 3)
+    :param              h_leds: number of leds on the side frame
+    :param              w_leds: number of leds on the upper frame
+    :param h:           number of rows of pixels for screen resolution
+    :param w:           number of columns of pixels for screen resolution
+    :return:            Nothing
     """
 
     # Configure the serial port
@@ -187,8 +191,6 @@ def serial_comm(port, baudrate):
     ser.baudrate = baudrate
     ser.open()
     # ser.timeout = 0.001
-    scale = 1
-    led_span = 2
 
     try:
         while True:
@@ -196,7 +198,8 @@ def serial_comm(port, baudrate):
             start_time = time.time()
 
             # Send a message (2 first characters are meant for led strip configuration)
-            message = str(scale) + str(led_span) + color_gen(scale=bool(scale), led_span=led_span) + '\n'
+            message = str(scale) + str(led_span) + color_gen(scale=bool(scale), led_span=led_span,
+                                                             h_leds=h_leds, w_leds=w_leds, h=h, w=w) + '\n'
             ser.write(message.encode('utf-8'))
             print(message)
 
@@ -219,7 +222,7 @@ def find_port(device_name):
     """
     Finds port of specified device
     :param device_name:     Device's name (can be found in device manager)
-    :return:
+    :return:                Port's name
     """
 
     ports = list(serial.tools.list_ports.comports())
@@ -233,16 +236,21 @@ if __name__ == "__main__":
 
     # Specify the name of the esp module that appears in device manager and baudrate
     ESP32_name = 'CH340'
-    # ESP32_name = 'CP210'
 
     # Specify the baudrate for UART communication - 115200 most stable
     ESP32_baudrate = 115200
-    # ESP32_baudrate = 230400
-    # ESP32_baudrate = 460800
-    # ESP32_baudrate = 921600
 
     # Find port of specified module
     ESP32_port = find_port(ESP32_name)
 
+    # Other parameters
+    scale = True
+    led_span = 1
+    h_leds = 18
+    w_leds = 36
+    h = 1440
+    w = 2560
+
     # Start communication
-    serial_comm(ESP32_port, ESP32_baudrate) if ESP32_port else print("Specified device not found!")
+    serial_comm(ESP32_port, ESP32_baudrate, scale, led_span, h_leds, w_leds, h, w) if ESP32_port else \
+        print("Specified device not found!")
