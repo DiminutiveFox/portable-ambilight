@@ -1,7 +1,7 @@
 # Flashing your board using esptool:
 esptool --chip esp32c3 --port COM(number) erase_flash
 esptool --chip esp32c3 --port COM(number) --baud 460800 write_flash -z 0x0 D:\....\ESP32_GENERIC_C3-20231005-v1.21.0.bin (FOR ESP-C3-32s AiThinker)
-esptool --chip esp32c3 --port COM(numer) --baud 460800 write_flash -z 0x1000 (FOR ESP32-WROOM-32D devkit)
+esptool --chip esp32c3 --port COM(number) --baud 460800 write_flash -z 0x1000 (FOR ESP32-WROOM-32D devkit)
 rshell -p COM(number) --rts False --dtr False # dtr and rts state depends on the devkit
 
 # Copy files from directory on your system to ESP:
