@@ -5,6 +5,7 @@ It is meant for laptops' screens and has a few interesting traits:
 - comunicates with system over USB
 - is customizable
 - easy to use
+- WS2812B does not need to be externally powered up
 
 ![Ambilight](https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/57772cf3-2aa2-4531-8323-f84526c7870e)
 
@@ -19,13 +20,13 @@ The goal is to communicate and send all the needed data through USB. It rises a 
 Framerate also depends on the screen resolution - the higher the resolution the more it takes to create a screenshot and compute LEDs' values. Also compute power of your PC is relevant - code is much slower on older machines.  
 
 # main.py
-The heart of the project - it's functionality was mostly described above. User needs to specify parameters of the setup e.g. number of LEDs and screen resolution (all parameters are found in __main__). 
+The heart of the project - it's functionality was mostly described above. User needs to specify parameters of the setup e.g. number of LEDs and screen resolution (all parameters are found in __main__). On PC side we use UART for communication. Using baudrate above 115200 is not recommended.
 
 # boot.py
 This is the file which is executed when ESP boots. It has standard structure and executes main.py which contains all important functions. Read the comments to configure the esp startup. Starting main loop from REPL is though recommended. Remember when esp_main.main() is started directly in boot.py file the REPL is lost and all files need to be erased (for example using esptool) to be able to flash ESP again. 
 
 # esp_main.py
-This is the main file for ESP. The most important aspect is that we want to communicate with system over USB-TTL bridge already mounted on board. It cannot be done easily since this bridge is connected to the UART0 which is reserved for REPL. Instead of UART communication sys.stdin is used for message reading on the ESP side. Default baudrate for REPL is 115200. It can be increased but communication becames unpredictable in higher rates - sometimes message is not read entirely or new message is inserted in the middle of the previous one. ESP behavior highly depends on the module. Check manufacturer's docs before buying one (and avoid my rookie mistake). Specify number of LEDs and GPIO for NeoPixel object. 
+This is the main file for ESP. The most important aspect is that we want to communicate with system over USB-TTL bridge already mounted on board. It cannot be done easily since this bridge is connected to the UART0 which is reserved for REPL. Instead of UART communication sys.stdin is used for message reading on the ESP side. Default baudrate for REPL is 115200. It can be increased but communication becames unpredictable in higher rates - sometimes message is not read entirely or new message is inserted in the middle of the previous one. ESP behavior highly depends on the module. Check manufacturer's docs before buying one (and avoid my rookie mistake). Specify number of LEDs and GPIO for NeoPixel object. For debugging purpose you can uncomment part of code which sends the message back to the PC (also you need to do this in main.py file) 
 
 ![image](https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/662ab1bc-f1a4-4cb6-8715-5ed4acf35490)
 
@@ -36,6 +37,17 @@ LED strip (if you are using standard monitor) can be attached directly to the ba
 
 # Step by step guide
 
-- download and print 3d parts - you can of course make your own design or glue 
+- download and print 3d parts - you can of course make your own design
+- glue everything together
+- put suction cups into the holes
+- cut and solder LED strip accordingly to the picture below
+- install micropython on your dev board
+- download code for ESP, specify parameters of your setup and flash the board
+- specify parameters of your setup in main.py file and run it
+- put it on the back on your laptop
+- enjoy!
+
+ ![image](https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/566e5c64-f5a7-4bc0-9649-e9564c1cf86e)
+
 
 
