@@ -22,6 +22,8 @@ Framerate also depends on the screen resolution - the higher the resolution the 
 # main.py
 The heart of the project - it's functionality was mostly described above. User needs to specify parameters of the setup e.g. number of LEDs and screen resolution (all parameters are found in __main__). On PC side we use UART for communication. Using baudrate above 115200 is not recommended.
 
+![image](https://github.com/DiminutiveFox/portable-ambilight/assets/135659343/b6f4b704-4ae1-4cd0-82ae-64268fd5fd8b)
+
 # boot.py
 This is the file which is executed when ESP boots. It has standard structure and executes main.py which contains all important functions. Read the comments to configure the esp startup. Starting main loop from REPL is though recommended. Remember when esp_main.main() is started directly in boot.py file the REPL is lost and all files need to be erased (for example using esptool) to be able to flash ESP again. 
 
