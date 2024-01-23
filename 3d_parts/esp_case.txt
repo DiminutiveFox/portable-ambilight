@@ -1,2 +1,2 @@
 ESP-C3 case can be found here:
-https://cults3d.com/en/orders/78447145
+https://cults3d.com/en/3d-model/tool/esp32-c3-12f-case-with-usb-a-connector-opening
