@@ -1,10 +1,16 @@
+import tkinter as tk
+from tkinter import messagebox, ttk
+import threading
 import cv2
-import serial.tools.list_ports
 import numpy as np
 import serial
 import time
 from collections import Counter
 import mss
+import serial.tools.list_ports
+
+# Global variable to control the running state of the serial communication thread
+running = True
 
 def dominant_color(screenshot, k=1):
     """
@@ -15,32 +21,19 @@ def dominant_color(screenshot, k=1):
     """
     # Reshape the image to a list of pixels
     pixels = screenshot.reshape((-1, 3))
-
-    # Convert the data type to float32
     pixels = np.float32(pixels)
-
-    # Define criteria (epsilon and max_iter) and apply kmeans()
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
     _, labels, centers = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-
-    # Convert back to 8-bit values
     centers = np.uint8(centers)
 
-    # If there's only one cluster, return its color
     if k == 1:
         dominant_color = centers[0]
     else:
-        # Count occurrences of each label
         label_counts = Counter(labels.flatten())
-
-        # Find the label with the maximum count
         dominant_label = max(label_counts, key=label_counts.get)
-
-        # Find the corresponding color for the dominant label
         dominant_color = centers[dominant_label]
 
     return list(dominant_color)
-
 
 def average_color(image):
     """
@@ -50,6 +43,7 @@ def average_color(image):
     """
     return np.average(image, axis=(1, 0))
 
+    return np.average(image, axis=(0, 1)).astype(int).tolist()
 
 def color_extraction(image_list, color_func, scale, led_number):
     """
@@ -61,6 +55,11 @@ def color_extraction(image_list, color_func, scale, led_number):
     :return:                Color string
     """
     color_list = [color_func(image_list[n]) for n in range(led_number)]
+def color_extraction(image_list, color_func, scale, led_number, use_constant_color=False, constant_color=None):
+    if use_constant_color and constant_color:
+        color_list = [constant_color for _ in range(led_number)]
+    else:
+        color_list = [color_func(image_list[n]) for n in range(led_number)]
     if scale:
         color_list = [[str(scale_channel(channels[2])), str(scale_channel(channels[1])),
                        str(scale_channel(channels[0]))] for channels in color_list]
@@ -68,7 +67,6 @@ def color_extraction(image_list, color_func, scale, led_number):
         color_list = [[str(int(channels[2])), str(int(channels[1])), str(int(channels[0]))] for channels in color_list]
 
     return color_string(color_list, scale)
-
 
 def scale_channel(channel_value):
     """
@@ -78,12 +76,10 @@ def scale_channel(channel_value):
     """
     channel_max_value = 255
     channel_scaled_max_value = 99
-    ret_val = channel_value*channel_scaled_max_value/channel_max_value
+    ret_val = channel_value * channel_scaled_max_value / channel_max_value
     if ret_val > 99:
         ret_val = 99
-
     return int(ret_val)
-
 
 def color_string(color_list, scale):
     """
@@ -95,7 +91,6 @@ def color_string(color_list, scale):
     """
 
     channel_length = 2 if scale else 3
-
     for color in color_list:
         while len(color[0]) < channel_length:
             color[0] = '0' + color[0]
@@ -103,7 +98,6 @@ def color_string(color_list, scale):
             color[1] = '0' + color[1]
         while len(color[2]) < channel_length:
             color[2] = '0' + color[2]
-
     return ''.join([''.join(sublist) for sublist in color_list])
 
 
@@ -120,23 +114,19 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560):
     """
 
     # For performance measurement purpose
+def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560, use_constant_color=False, constant_color=None, method=average_color):
     s_time = time.time()
-
-    # Defining the number of active leds
     led_span = 1 if led_span not in [1, 2, 3] else led_span
     h_leds = int(h_leds / led_span)
     w_leds = int(w_leds / led_span)
-    # Parameters needed for defining the screenshots' areas
     h_divider = 8
     w_divider = 16
 
-    # Defining bounding boxes for screenshots
     u_box = {"top": 0, "left": 0, "width": w, "height": int(h / h_divider)}
     l_box = {"top": int(h / h_divider), "left": 0, "width": int(w / w_divider), "height": int(h - h / h_divider)}
     r_box = {"top": int(h / h_divider), "left": int(w - w / w_divider),
              "width": int(w / w_divider), "height": int(h - h / h_divider)}
 
-    # Taking screenshot of the frame - frame is composed of 3 screenshots (2 side and 1 upper fields)
     with mss.mss() as camera:
         u_screenshot = np.array(camera.grab(u_box))
         l_screenshot = np.array(camera.grab(l_box))
@@ -147,22 +137,19 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560):
 
     print(f"Time of taking screenshot: {time.time() - s_time}")
 
-    # Screenshots' dimensions needed for their division
     h_r, w_r, c_r = r_screenshot.shape
     h_l, w_l, c_l = l_screenshot.shape
     h_u, w_u, c_u = u_screenshot.shape
 
-    # Dividing screenshots into smaller ones and extracting average color of them
     l_image_list = [l_screenshot[int(n*h_l/h_leds):int(n*h_l/h_leds+h_l/h_leds):] for n in range(h_leds - 1, -1, -1)]
-    l_colors = color_extraction(l_image_list, average_color, scale, h_leds)
+    l_colors = color_extraction(l_image_list, method, scale, h_leds, use_constant_color, constant_color)
 
     u_image_list = [u_screenshot[:, int(n * w_u / w_leds):int(n * w_u / w_leds + w_u / w_leds)] for n in range(w_leds)]
-    u_colors = color_extraction(u_image_list, average_color, scale, w_leds)
+    u_colors = color_extraction(u_image_list, method, scale, w_leds, use_constant_color, constant_color)
 
     r_image_list = [r_screenshot[int(n * h_r / h_leds):int(n * h_r / h_leds + h_r / h_leds), :] for n in range(h_leds)]
-    r_colors = color_extraction(r_image_list, average_color, scale, h_leds)
+    r_colors = color_extraction(r_image_list, method, scale, h_leds, use_constant_color, constant_color)
 
-    # Returning the extracted colors
     print(f"Time of color extraction: {time.time() - s_time}")
     return l_colors + u_colors + r_colors
 
@@ -182,41 +169,37 @@ def serial_comm(port, baudrate, scale=1, led_span=2, h_leds=18, w_leds=36, h=144
     """
 
     # Configure the serial port
+def serial_comm(port, baudrate, scale=1, led_span=2, h_leds=18, w_leds=36, h=1440, w=2560, use_constant_color=False, constant_color=None, method='average'):
     ser = serial.Serial()
-
-    # In my case DTR and RTS pins have to be set to false
     ser.setDTR(False)
     ser.setRTS(False)
     ser.port = port
     ser.baudrate = baudrate
     ser.open()
     # ser.timeout = 0.001
+    
+    color_extract_mehod = average_color if method == 'average' else dominant_color
 
     try:
-        while True:
-            # Get time for measurement
+        while running:  # Check if the thread should keep running
             start_time = time.time()
 
             # Send a message (2 first characters are meant for led strip configuration)
             message = str(scale) + str(led_span) + color_gen(scale=bool(scale), led_span=led_span,
                                                              h_leds=h_leds, w_leds=w_leds, h=h, w=w) + '\n'
+            color_str = f"{constant_color[0]},{constant_color[1]},{constant_color[2]}" if use_constant_color and constant_color else "0,0,0"
+            message = str(scale) + str(led_span) + color_gen(scale=bool(scale), led_span=led_span,
+                                                             h_leds=h_leds, w_leds=w_leds, h=h, w=w, use_constant_color=use_constant_color, constant_color=constant_color, method=color_extract_mehod) + '\n'
             ser.write(message.encode('utf-8'))
             print(message)
-
-            # Wait for response (for debugging mostly - it slows down the whole process)
-            # response = ser.readline().strip()
-            # print("Response from ESP32:", response)
-
-            # Needed for stable communication
             time.sleep(0.01) if led_span == 1 else None
-
-            # Print time
             end_time = time.time()
             print(f'Time elapsed: {end_time - start_time}')
 
     except KeyboardInterrupt:
         ser.close()
-
+    finally:
+        ser.close()  # Ensure the serial connection is closed when exiting
 
 def find_port(device_name):
     """
@@ -226,15 +209,12 @@ def find_port(device_name):
     """
 
     ports = list(serial.tools.list_ports.comports())
-
     for port, desc, hwid in ports:
         if device_name.lower() in desc.lower():
             return port
 
-
-if __name__ == "__main__":
-
-    # Specify the name of the esp module that appears in device manager and baudrate
+def start_serial_comm(scale, led_span, h_leds, w_leds, h, w, use_constant_color, constant_color, method):
+    global running
     ESP32_name = 'CH340'
 
     # Specify the baudrate for UART communication - 115200 most stable
@@ -243,14 +223,135 @@ if __name__ == "__main__":
     # Find port of specified module
     ESP32_port = find_port(ESP32_name)
 
-    # Other parameters
-    scale = True
-    led_span = 1
-    h_leds = 18
-    w_leds = 36
-    h = 1440
-    w = 2560
-
     # Start communication
     serial_comm(ESP32_port, ESP32_baudrate, scale, led_span, h_leds, w_leds, h, w) if ESP32_port else \
         print("Specified device not found!")
+    if ESP32_port:
+        running = True  # Reset the running flag to True
+        serial_comm(ESP32_port, ESP32_baudrate, scale, led_span, h_leds, w_leds, h, w, use_constant_color, constant_color, method)
+    else:
+        print("Specified device not found!")
+
+def start_thread(scale, led_span, h_leds, w_leds, h, w, use_constant_color, constant_color, method):
+    global running
+    threading.Thread(target=start_serial_comm, args=(scale, led_span, h_leds, w_leds, h, w, use_constant_color, constant_color, method), daemon=True).start()
+
+def start_button_clicked():
+    try:
+        scale = int(scale_entry.get())
+        led_span = int(led_span_entry.get())
+        h_leds = int(h_leds_entry.get())
+        w_leds = int(w_leds_entry.get())
+        h = int(h_entry.get())
+        w = int(w_entry.get())
+        r = int(r_entry.get())
+        g = int(g_entry.get())
+        b = int(b_entry.get())
+        constant_color = (r, g, b)
+        method = extraction_method_combobox.get()
+        use_constant_color = send_constant_color_var.get() == 1
+
+        start_thread(scale, led_span, h_leds, w_leds, h, w, use_constant_color, constant_color, method)
+
+    except ValueError as e:
+        messagebox.showerror("Invalid input", str(e))
+
+def stop_button_clicked():
+    global running
+    running = False  # Set the running flag to False to stop the thread
+
+root = tk.Tk()
+root.title("Color Extraction")
+
+main_frame = ttk.Frame(root, padding="10")
+main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+# Create and place the input fields and labels
+scale_label = ttk.Label(main_frame, text="Scale (0 or 1):")
+scale_label.grid(row=0, column=0, sticky=tk.W)
+scale_entry = ttk.Entry(main_frame)
+scale_entry.grid(row=0, column=1)
+
+led_span_label = ttk.Label(main_frame, text="LED Span (1, 2, or 3):")
+led_span_label.grid(row=1, column=0, sticky=tk.W)
+led_span_entry = ttk.Entry(main_frame)
+led_span_entry.grid(row=1, column=1)
+
+h_leds_label = ttk.Label(main_frame, text="Horizontal LEDs:")
+h_leds_label.grid(row=2, column=0, sticky=tk.W)
+h_leds_entry = ttk.Entry(main_frame)
+h_leds_entry.grid(row=2, column=1)
+
+w_leds_label = ttk.Label(main_frame, text="Vertical LEDs:")
+w_leds_label.grid(row=3, column=0, sticky=tk.W)
+w_leds_entry = ttk.Entry(main_frame)
+w_leds_entry.grid(row=3, column=1)
+
+h_label = ttk.Label(main_frame, text="Screen Height:")
+h_label.grid(row=4, column=0, sticky=tk.W)
+h_entry = ttk.Entry(main_frame)
+h_entry.grid(row=4, column=1)
+
+w_label = ttk.Label(main_frame, text="Screen Width:")
+w_label.grid(row=5, column=0, sticky=tk.W)
+w_entry = ttk.Entry(main_frame)
+w_entry.grid(row=5, column=1)
+
+r_label = ttk.Label(main_frame, text="Blue Value (0-255):")
+r_label.grid(row=6, column=0, sticky=tk.W)
+r_entry = ttk.Entry(main_frame)
+r_entry.grid(row=6, column=1)
+
+g_label = ttk.Label(main_frame, text="Green Value (0-255):")
+g_label.grid(row=7, column=0, sticky=tk.W)
+g_entry = ttk.Entry(main_frame)
+g_entry.grid(row=7, column=1)
+
+b_label = ttk.Label(main_frame, text="Red Value (0-255):")
+b_label.grid(row=8, column=0, sticky=tk.W)
+b_entry = ttk.Entry(main_frame)
+b_entry.grid(row=8, column=1)
+
+# Method selection
+extraction_method_label = ttk.Label(main_frame, text="Extraction Method:")
+extraction_method_label.grid(row=9, column=0, sticky=tk.W)
+extraction_method_combobox = ttk.Combobox(main_frame, values=["average", "dominant"])
+extraction_method_combobox.grid(row=9, column=1)
+
+# Checkbox for sending constant color
+send_constant_color_var = tk.IntVar()
+send_constant_color_check = ttk.Checkbutton(main_frame, text="Send Constant Color", variable=send_constant_color_var)
+send_constant_color_check.grid(row=10, column=0, columnspan=2)
+
+# Default values
+DEFAULT_SCALE = 1
+DEFAULT_LED_SPAN = 2
+DEFAULT_H_LEDS = 18
+DEFAULT_W_LEDS = 36
+DEFAULT_H = 1440
+DEFAULT_W = 2560
+DEFAULT_R = 0
+DEFAULT_G = 0
+DEFAULT_B = 0
+DEFAULT_METHOD = "average"
+
+# Set default values in the entry fields
+scale_entry.insert(0, DEFAULT_SCALE)
+led_span_entry.insert(0, DEFAULT_LED_SPAN)
+h_leds_entry.insert(0, DEFAULT_H_LEDS)
+w_leds_entry.insert(0, DEFAULT_W_LEDS)
+h_entry.insert(0, DEFAULT_H)
+w_entry.insert(0, DEFAULT_W)
+r_entry.insert(0, DEFAULT_R)
+g_entry.insert(0, DEFAULT_G)
+b_entry.insert(0, DEFAULT_B)
+extraction_method_combobox.set(DEFAULT_METHOD)
+
+start_button = ttk.Button(main_frame, text="Start", command=start_button_clicked)
+start_button.grid(row=11, column=0, columnspan=2, pady=5)
+
+stop_button = ttk.Button(main_frame, text="Stop", command=stop_button_clicked)
+stop_button.grid(row=12, column=0, columnspan=2, pady=5)
+
+root.mainloop()
+
