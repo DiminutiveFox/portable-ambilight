@@ -12,28 +12,35 @@ import serial.tools.list_ports
 # Global variable to control the running state of the serial communication thread
 running = True
 
-def dominant_color(screenshot, k=1):
-    """
-    Returns dominant color of the screenshot
-    :param screenshot:      Picture represented as NumPy array
-    :param k:               parameter k
-    :return:                Dominant color of a specified field
-    """
+def is_vivid_color(pixel, threshold=30):
+    r, g, b = pixel
+    if max(abs(r - g), abs(g - b), abs(b - r)) > threshold:
+        return True
+    return False
+
+def dominant_color(screenshot, k=5):
+    
     # Reshape the image to a list of pixels
     pixels = screenshot.reshape((-1, 3))
     pixels = np.float32(pixels)
+
+    # Filter out grayscale pixels
+    vivid_pixels = np.array([pixel for pixel in pixels if is_vivid_color(pixel)])
+    
+    if len(vivid_pixels) == 0:
+        return None  # No vivid colors found
+
+    # Define k-means criteria
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
-    _, labels, centers = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    
+    # Apply k-means clustering
+    _, labels, centers = cv2.kmeans(vivid_pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
     centers = np.uint8(centers)
+    
+    # Find the most vivid color (with maximum saturation)
+    vivid_color = max(centers, key=lambda c: np.std(c))
 
-    if k == 1:
-        dominant_color = centers[0]
-    else:
-        label_counts = Counter(labels.flatten())
-        dominant_label = max(label_counts, key=label_counts.get)
-        dominant_color = centers[dominant_label]
-
-    return list(dominant_color)
+    return vivid_color
 
 def average_color(image):
     """
@@ -43,18 +50,6 @@ def average_color(image):
     """
     return np.average(image, axis=(1, 0))
 
-    return np.average(image, axis=(0, 1)).astype(int).tolist()
-
-def color_extraction(image_list, color_func, scale, led_number):
-    """
-    Returns string of extracted RGB colors from given list of screenshots
-    :param color_func:      function that finds preferable color on the screenshot e.g. average color
-    :param image_list:      list of screenshots
-    :param scale:           parameter that specifies if color scale is reduced from 0-255 to 0-99
-    :param led_number:      number of leds for given list of screenshots
-    :return:                Color string
-    """
-    color_list = [color_func(image_list[n]) for n in range(led_number)]
 def color_extraction(image_list, color_func, scale, led_number, use_constant_color=False, constant_color=None):
     if use_constant_color and constant_color:
         color_list = [constant_color for _ in range(led_number)]
@@ -131,9 +126,9 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560, use_
         u_screenshot = np.array(camera.grab(u_box))
         l_screenshot = np.array(camera.grab(l_box))
         r_screenshot = np.array(camera.grab(r_box))
-        u_screenshot = cv2.resize(u_screenshot, dsize=(int(w/4), int(h/h_divider/4)), interpolation=cv2.INTER_CUBIC)
-        l_screenshot = cv2.resize(l_screenshot, dsize=(int(h/4), int(w/w_divider/4)), interpolation=cv2.INTER_CUBIC)
-        r_screenshot = cv2.resize(r_screenshot, dsize=(int(h/4), int(w/w_divider/4)), interpolation=cv2.INTER_CUBIC)
+        u_screenshot = cv2.resize(u_screenshot, dsize=(int(w/4), int(h/h_divider/4)), interpolation=cv2.INTER_NEAREST)
+        l_screenshot = cv2.resize(l_screenshot, dsize=(int(h/4), int(w/w_divider/4)), interpolation=cv2.INTER_NEAREST)
+        r_screenshot = cv2.resize(r_screenshot, dsize=(int(h/4), int(w/w_divider/4)), interpolation=cv2.INTER_NEAREST)
 
     print(f"Time of taking screenshot: {time.time() - s_time}")
 
@@ -153,8 +148,8 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560, use_
     print(f"Time of color extraction: {time.time() - s_time}")
     return l_colors + u_colors + r_colors
 
-
-def serial_comm(port, baudrate, scale=1, led_span=2, h_leds=18, w_leds=36, h=1440, w=2560):
+    # Configure the serial port
+def serial_comm(port, baudrate, scale=1, led_span=2, h_leds=18, w_leds=36, h=1440, w=2560, use_constant_color=False, constant_color=None, method='average'):
     """
     Exchanges data between device via serial port
     :param port:        ESP port
@@ -167,9 +162,6 @@ def serial_comm(port, baudrate, scale=1, led_span=2, h_leds=18, w_leds=36, h=144
     :param w:           number of columns of pixels for screen resolution
     :return:            Nothing
     """
-
-    # Configure the serial port
-def serial_comm(port, baudrate, scale=1, led_span=2, h_leds=18, w_leds=36, h=1440, w=2560, use_constant_color=False, constant_color=None, method='average'):
     ser = serial.Serial()
     ser.setDTR(False)
     ser.setRTS(False)
@@ -185,11 +177,12 @@ def serial_comm(port, baudrate, scale=1, led_span=2, h_leds=18, w_leds=36, h=144
             start_time = time.time()
 
             # Send a message (2 first characters are meant for led strip configuration)
-            message = str(scale) + str(led_span) + color_gen(scale=bool(scale), led_span=led_span,
-                                                             h_leds=h_leds, w_leds=w_leds, h=h, w=w) + '\n'
+            # message = str(scale) + str(led_span) + color_gen(scale=bool(scale), led_span=led_span,
+            #                                                  h_leds=h_leds, w_leds=w_leds, h=h, w=w) + '\n'
             color_str = f"{constant_color[0]},{constant_color[1]},{constant_color[2]}" if use_constant_color and constant_color else "0,0,0"
-            message = str(scale) + str(led_span) + color_gen(scale=bool(scale), led_span=led_span,
-                                                             h_leds=h_leds, w_leds=w_leds, h=h, w=w, use_constant_color=use_constant_color, constant_color=constant_color, method=color_extract_mehod) + '\n'
+            color_string = color_gen(scale=bool(scale), led_span=led_span,
+                                                             h_leds=h_leds, w_leds=w_leds, h=h, w=w, use_constant_color=use_constant_color, constant_color=constant_color, method=color_extract_mehod)
+            message = str(scale) + str(led_span) + color_string + '\n'
             ser.write(message.encode('utf-8'))
             print(message)
             time.sleep(0.01) if led_span == 1 else None
@@ -219,7 +212,7 @@ def start_serial_comm(scale, led_span, h_leds, w_leds, h, w, use_constant_color,
 
     # Specify the baudrate for UART communication - 115200 most stable
     ESP32_baudrate = 115200
-
+    # ESP32_baudrate = 230400
     # Find port of specified module
     ESP32_port = find_port(ESP32_name)
 
@@ -327,7 +320,7 @@ send_constant_color_check.grid(row=10, column=0, columnspan=2)
 DEFAULT_SCALE = 1
 DEFAULT_LED_SPAN = 2
 DEFAULT_H_LEDS = 18
-DEFAULT_W_LEDS = 36
+DEFAULT_W_LEDS = 32
 DEFAULT_H = 1440
 DEFAULT_W = 2560
 DEFAULT_R = 0

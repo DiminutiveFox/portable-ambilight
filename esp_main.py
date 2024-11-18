@@ -77,7 +77,6 @@ def reset_np():
     Resets all pixel values back to [0, 0, 0]
     :return:
     """
-
     for i in range(NUM_PIXELS):
         np[i] = [0, 0, 0]
     np.write()
@@ -129,6 +128,6 @@ def main():
 
     print("Entering main...")
     time.sleep(0.5)
-    # esp32_baudrate = 230400
+    esp32_baudrate = 230400
     # esp32_baudrate = 460800
-    serial_comm()
+    serial_comm(esp32_baudrate)
