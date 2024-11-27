@@ -12,35 +12,80 @@ import serial.tools.list_ports
 # Global variable to control the running state of the serial communication thread
 running = True
 
-def is_vivid_color(pixel, threshold=30):
-    r, g, b = pixel
-    if max(abs(r - g), abs(g - b), abs(b - r)) > threshold:
-        return True
-    return False
+def is_vivid_color(pixel, threshold=50):
+    """
+    Determines if a pixel is vivid (not brownish, grayish, or dark).
+    Returns True for vivid pixels and False otherwise.
+    """
+    # Convert RGB to HSV
+    rgb_color = np.array(pixel, dtype=np.uint8).reshape(1, 1, 3)
+    hsv_color = cv2.cvtColor(rgb_color, cv2.COLOR_RGB2HSV)
+    h, s, v = hsv_color[0, 0]
 
-def dominant_color(screenshot, k=5):
-    
+    # Filter dark colors: low brightness
+    if v < threshold:  # Threshold for brightness; adjust as needed (e.g., 50 or 70)
+        return False
+
+    # Filter grayish/dull colors: low saturation
+    if s < 80:  # Adjust saturation threshold as needed
+        return False
+
+    # Filter brownish colors: specific hue ranges with low saturation
+    if 10 <= h <= 50 and s < 100:
+        return False
+
+    # If none of the above, pixel is vivid
+    return True
+
+
+def enhance_vibrancy(color, boost_saturation=1.5, boost_brightness=1.2):
+    """
+    Enhances the vibrancy of a single RGB color by adjusting its saturation and brightness.
+    - Converts to HSV, boosts saturation/brightness, and returns RGB.
+    """
+    # Convert RGB to HSV
+    rgb_color = np.array(color, dtype=np.uint8).reshape(1, 1, 3)
+    hsv_color = cv2.cvtColor(rgb_color, cv2.COLOR_RGB2HSV).astype(np.float32)
+
+    # Adjust saturation and brightness
+    h, s, v = cv2.split(hsv_color)
+    s = np.clip(s * boost_saturation, 0, 255)
+    v = np.clip(v * boost_brightness, 0, 255)
+
+    # Merge and convert back to RGB
+    enhanced_hsv = cv2.merge([h, s, v]).astype(np.uint8)
+    enhanced_rgb = cv2.cvtColor(enhanced_hsv, cv2.COLOR_HSV2RGB).reshape(3)
+    return enhanced_rgb
+
+def dominant_color(screenshot, k=100):
+    """
+    Extracts the most dominant, vivid color from the screenshot.
+    Applies vibrancy enhancement and filters out unattractive colors.
+    """
     # Reshape the image to a list of pixels
     pixels = screenshot.reshape((-1, 3))
     pixels = np.float32(pixels)
 
-    # Filter out grayscale pixels
-    vivid_pixels = np.array([pixel for pixel in pixels if is_vivid_color(pixel)])
+    # Filter out grayscale or dull colors (low saturation or brightness)
+    vivid_pixels = np.array([pixel for pixel in pixels if is_vivid_color(pixel, threshold=90)])
     
+    # If no vivid colors exist, return black (0, 0, 0)
     if len(vivid_pixels) == 0:
-        return None  # No vivid colors found
+        return np.zeros((1, 3), dtype=np.uint8)  # Return black for no vivid colors
 
     # Define k-means criteria
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
-    
-    # Apply k-means clustering
+
+    # Apply k-means clustering to find dominant colors
     _, labels, centers = cv2.kmeans(vivid_pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
     centers = np.uint8(centers)
-    
-    # Find the most vivid color (with maximum saturation)
-    vivid_color = max(centers, key=lambda c: np.std(c))
 
-    return vivid_color
+    # Enhance vibrancy of the most frequent color cluster
+    dominant_cluster = Counter(labels.flatten()).most_common(1)[0][0]
+    dominant_color = centers[dominant_cluster]
+    enhanced_color = enhance_vibrancy(dominant_color)
+
+    return enhanced_color
 
 def average_color(image):
     """
@@ -126,6 +171,9 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560, use_
         u_screenshot = np.array(camera.grab(u_box))
         l_screenshot = np.array(camera.grab(l_box))
         r_screenshot = np.array(camera.grab(r_box))
+        # u_screenshot = cv2.cvtColor(np.array(camera.grab(u_box)), cv2.COLOR_BGRA2BGR)
+        # l_screenshot = cv2.cvtColor(np.array(camera.grab(l_box)), cv2.COLOR_BGRA2BGR)
+        # r_screenshot = cv2.cvtColor(np.array(camera.grab(r_box)), cv2.COLOR_BGRA2BGR)
         u_screenshot = cv2.resize(u_screenshot, dsize=(int(w/4), int(h/h_divider/4)), interpolation=cv2.INTER_NEAREST)
         l_screenshot = cv2.resize(l_screenshot, dsize=(int(h/4), int(w/w_divider/4)), interpolation=cv2.INTER_NEAREST)
         r_screenshot = cv2.resize(r_screenshot, dsize=(int(h/4), int(w/w_divider/4)), interpolation=cv2.INTER_NEAREST)
@@ -137,7 +185,17 @@ def color_gen(scale=True, led_span=1, h_leds=18, w_leds=36, h=1440, w=2560, use_
     h_u, w_u, c_u = u_screenshot.shape
 
     l_image_list = [l_screenshot[int(n*h_l/h_leds):int(n*h_l/h_leds+h_l/h_leds):] for n in range(h_leds - 1, -1, -1)]
+    # for i, n in enumerate(l_image_list):
+    #     cv2.imshow(f"Image{i}", n)
+    #     cv2.waitKey()
+    
     l_colors = color_extraction(l_image_list, method, scale, h_leds, use_constant_color, constant_color)
+    # l_images = []
+    
+    # for i,n in enumerate(l_colors):
+    #     l_images[i] = np.ones((l_image_list[i].shape[0], l_image_list[i].shape[1], 3), dtype=np.uint8) * n
+    #     cv2.imshow(f"Image{i}", n)
+    #     cv2.waitKey()
 
     u_image_list = [u_screenshot[:, int(n * w_u / w_leds):int(n * w_u / w_leds + w_u / w_leds)] for n in range(w_leds)]
     u_colors = color_extraction(u_image_list, method, scale, w_leds, use_constant_color, constant_color)
@@ -179,6 +237,7 @@ def serial_comm(port, baudrate, scale=1, led_span=2, h_leds=18, w_leds=36, h=144
             # Send a message (2 first characters are meant for led strip configuration)
             # message = str(scale) + str(led_span) + color_gen(scale=bool(scale), led_span=led_span,
             #                                                  h_leds=h_leds, w_leds=w_leds, h=h, w=w) + '\n'
+
             color_str = f"{constant_color[0]},{constant_color[1]},{constant_color[2]}" if use_constant_color and constant_color else "0,0,0"
             color_string = color_gen(scale=bool(scale), led_span=led_span,
                                                              h_leds=h_leds, w_leds=w_leds, h=h, w=w, use_constant_color=use_constant_color, constant_color=constant_color, method=color_extract_mehod)
